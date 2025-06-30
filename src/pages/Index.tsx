@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shirt, Package, ShoppingBag, Jacket } from 'lucide-react';
+import { Shirt, Package, ShoppingBag } from 'lucide-react';
 
 const Index = () => {
   const categories = [
     { id: 'tops', name: '상의', icon: Shirt, items: 5 },
     { id: 'bottoms', name: '하의', icon: Package, items: 3 },
     { id: 'shoes', name: '신발', icon: ShoppingBag, items: 4 },
-    { id: 'outerwear', name: '아우터', icon: Jacket, items: 2 },
+    { id: 'outerwear', name: '아우터', icon: Shirt, items: 2 },
   ];
 
   return (
