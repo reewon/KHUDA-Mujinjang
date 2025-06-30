@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, X } from 'lucide-react';
@@ -16,6 +16,9 @@ const OutfitResult = () => {
   });
 
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const handleRemoveItem = (category: string) => {
     setOutfitItems(prev => ({
@@ -26,6 +29,46 @@ const OutfitResult = () => {
 
   const handleItemClick = (category: string) => {
     setSelectedItem(selectedItem === category ? null : category);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, category: string) => {
+    e.preventDefault();
+    setSelectedItem(category);
+    setIsDragging(true);
+    
+    const item = outfitItems[category as keyof typeof outfitItems];
+    if (item) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - item.position.x,
+        y: e.clientY - item.position.y
+      });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && selectedItem && canvasRef.current) {
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const newX = e.clientX - canvasRect.left - dragOffset.x;
+      const newY = e.clientY - canvasRect.top - dragOffset.y;
+      
+      // 캔버스 경계 제한
+      const boundedX = Math.max(0, Math.min(newX, canvasRect.width - 80));
+      const boundedY = Math.max(0, Math.min(newY, canvasRect.height - 80));
+      
+      setOutfitItems(prev => ({
+        ...prev,
+        [selectedItem]: {
+          ...prev[selectedItem as keyof typeof prev],
+          position: { x: boundedX, y: boundedY }
+        }
+      }));
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDragOffset({ x: 0, y: 0 });
   };
 
   return (
@@ -47,14 +90,20 @@ const OutfitResult = () => {
         <div className="bg-white rounded-2xl p-8 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-800 mb-6 text-center">추천 코디</h2>
           
-          <div className="relative w-full h-96 bg-gray-50 rounded-lg overflow-hidden">
+          <div 
+            ref={canvasRef}
+            className="relative w-full h-96 bg-gray-50 rounded-lg overflow-hidden select-none"
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
             {Object.entries(outfitItems).map(([category, item]) => 
               item && (
                 <div
                   key={category}
-                  className={`absolute cursor-pointer transition-all ${
-                    selectedItem === category ? 'ring-2 ring-amber-500 ring-offset-2' : ''
-                  }`}
+                  className={`absolute cursor-pointer transition-all user-select-none ${
+                    selectedItem === category ? 'ring-2 ring-amber-500 ring-offset-2 z-10' : 'z-0'
+                  } ${isDragging && selectedItem === category ? 'cursor-move' : 'cursor-pointer'}`}
                   style={{ 
                     left: item.position.x, 
                     top: item.position.y,
@@ -62,11 +111,13 @@ const OutfitResult = () => {
                     height: '80px'
                   }}
                   onClick={() => handleItemClick(category)}
+                  onMouseDown={(e) => handleMouseDown(e, category)}
                 >
                   <img 
                     src={item.image} 
                     alt={item.name}
-                    className="w-full h-full object-cover rounded-lg shadow-sm"
+                    className="w-full h-full object-cover rounded-lg shadow-sm pointer-events-none"
+                    draggable={false}
                   />
                 </div>
               )
